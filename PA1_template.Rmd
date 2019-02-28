@@ -1,25 +1,134 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Assignment"
+author: "Jungsok Lee"
+date: "2019년 2월 28일"
+output: html_document
 ---
 
-
+# 1. Code for reading in the dataset and/or processing the data
 ## Loading and preprocessing the data
+firstly, I read data form activity.csv file which is placed at current working directory, then assigned the data to variable dat.
+
+Then, I sum everyday total steps with tapply function, made dataframe having dates and total steps at that day as columns, and then removed rows that contains NA at steps column.
+```{r readandproc, result = "hide"}
+dat <- read.csv("activity.csv")
+View(dat)
+class(dat$date)
+dat$date <- as.Date(as.character(dat$date), "%Y-%m-%d")
+
+steps_by_dates <- tapply(dat$steps, dat$date, sum)
+steps_by_dates <- data.frame(names(steps_by_dates), steps_by_dates,row.names = 1:length(steps_by_dates))
+names(steps_by_dates) <- c("dates", "steps")
+steps_by_dates$dates <- as.Date(as.character(steps_by_dates$dates), "%Y-%m-%d")
+steps_by_dates$steps <- as.numeric(as.character(steps_by_dates$steps))
+steps_by_dates_T <- steps_by_dates[!is.na(steps_by_dates$steps),]
+
+
+```
+
+# 2. Histogram of the total number of steps taken each day
+
+I made a histogram using dataframe I made right before.
+```{r histogram1}
+hist(steps_by_dates_T$steps, xlab = "Total Steps", col = "blue", main = "Histogram of Total Steps")
+```
+
+
+# 3. Mean and median number of steps taken each day
+
+I calcuated Mean and median Steps taken at each day.
+```{r meanmedian}
+sprintf("Mean : %.2f", mean(steps_by_dates_T$steps))
+sprintf("Median : %d", median(steps_by_dates_T$steps))
+```
+
+
+# 4. Time series plot of the average number of steps taken
+
+I plotted type series plot of the average number of steps taken.
+```{r timeseriplot}
+plot(steps_by_dates_T$dates, steps_by_dates_T$steps, xlab = "Dates", ylab = "Steps", type = "l", col = "red")
+```
+
+
+# 5. The 5-minute interval that, on average, contains the maximum number of steps
+
+I take the 5-minute time interval that contains the maximun number of steps
+```{r maxsteps}
+steps_by_interval <- tapply(dat$steps, dat$interval, mean, na.rm = TRUE)
+names(steps_by_interval[steps_by_interval == max(steps_by_interval)])
+```
+
+# 6. Code to describe and show a strategy for imputing missing data
+## Imputing missing values
+I replace NA value using mean value.
+
+```{r impute}
+dat[is.na(dat$steps), 1] <- mean(dat$steps, na.rm = T)
+```
+
+
+# 7. Histogram of the total number of steps taken each day after missing values are imputed
+
+I made histogram using imputed data.
+```{r hist-rep}
+steps_by_dates <- tapply(dat$steps, dat$date, sum)
+steps_by_dates <- data.frame(names(steps_by_dates), steps_by_dates,row.names = 1:length(steps_by_dates))
+names(steps_by_dates) <- c("dates", "steps")
+steps_by_dates$dates <- as.Date(as.character(steps_by_dates$dates), "%Y-%m-%d")
+steps_by_dates$steps <- as.numeric(as.character(steps_by_dates$steps))
+hist(steps_by_dates$steps, xlab = "Total Steps", col = "red", main = "Histogram of Total Steps")
+```
+
+
+
+# 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+I plotted panel plot comparing the average number of steps taken per 5-minute interval across weekdays.
+
+I used dplyr to group the data by weekdays.
+
+```{r panelplot}
+Sys.setlocale("LC_TIME", "English")
+library(dplyr)
+library(lattice)
+dat$days <- weekdays(dat$date)
+
+week <- subset(dat, days %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))
+week <- tbl_df(week)
+week$interval <- as.factor(week$interval)
+week <- group_by(week, interval)
+week_steps <- summarize(week, mean(steps))
+week_steps$interval <- as.numeric(as.character(week_steps$interval))
+week_steps$day <- "weekday"
+
+weekend <- subset(dat, days %in% c("Saturday", "Sunday"))
+weekend <- tbl_df(weekend)
+weekend$interval <- as.factor(weekend$interval)
+weekend <- group_by(weekend, interval)
+weekend_steps <- summarize(weekend, mean(steps))
+weekend_steps$interval <- as.numeric(as.character(weekend_steps$interval))
+weekend_steps$day <- "weekend"
+
+steps_mean<-rbind(week_steps, weekend_steps)
+names(steps_mean)[2] <- "steps"
+with(steps_mean, xyplot(steps ~ interval|day, type = "l", layout = c(1,2), ylab = "Number of Steps"))
+```
+
+
+
 
 
 
 ## What is mean total number of steps taken per day?
-
+### 10766.19 steps
 
 
 ## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
+### people usually take most of their daily steps during morning.
 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+### Compared to weekdays, In weekend step distributions are relatively even during daytime. It doesn't have a morning spike.
+
